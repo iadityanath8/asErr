@@ -30,16 +30,58 @@ Error New(const char* msg){
   };
 }
 
-Error divide(int a,int b){
-  if(b == 0){
-    return New("Not allowed"); 
-  }else{
-    return (Error){};
-  }
+void divide(int a, int b) {
+    Error err = {.message = "Message is in here\n", .code = 2, .log = Default_Logger};
+    int t = 23;
+
+    asm volatile(
+        "mov %0,  %%eax\n\t"   // Move err.code into %eax
+        "movq %1, %%rdx\n\t"   // Move t into %edx
+        "movq %2, %%rcx\n\t"
+        :
+        : "r" (err.code), "r" (err.message), "r" (err.log)
+        : "eax", "rdx"        // Specify clobbered registers
+    );
 }
 
+
+// void move_struct(Error* err) {
+//     asm volatile (
+//         "push %0\n\t"   // Push message onto the stack
+//         "push %1\n\t"   // Push code onto the stack
+//         "push %2\n\t"   // Push log function pointer onto the stack
+//         "add $24, %%rsp\n\t" // Adjust the stack pointer to balance the pushes
+//         :
+//         : "r" (err->message), "r" (err->code), "r" (err->log)
+//         : "memory"      // Inform compiler about memory changes
+//     );
+// }
+
+
 int main(){
-  Error err = divide(4,0);
-  printf("%s\n",err.message);
+  divide(12,12);
+  int code = {0};
+  char* code2 = {0};
+  void(*fn)(Error* err,const char*p);
+
+  Error e;
+  asm volatile(
+    "mov %%eax, %0\n\t"
+    // "mov %%edx, %1\n\t"
+    : "=r" (e.code)
+  );
+
+  asm volatile(
+    "mov %%rdx, %0"
+    : "=r" (e.message)
+  );
+
+  asm volatile(
+    "mov %%rcx, %0"
+    : "=r" (e.log)
+  );
+
+  e.log(&e,"MEOW");
+  // printf("%s\n",e.message);
   return 0;
 }
